@@ -35,13 +35,16 @@ def get_movies_list(
         sort_order: SortOrderEnum = Query(default=SortOrderEnum.asc, description="порядок сортировки"),
         search: Optional[str] = Query(default=None, description=search_title),
 ):
-    return {
-        "limit": limit,
-        "page": page,
-        "sort": sort,
-        "sort_order": sort_order,
-        "search": search
-    }
+    try:
+        return es.search_movies(
+            limit=limit,
+            page=page,
+            sort=sort,
+            sort_order=sort_order,
+            search=search
+        )
+    except es.ElasticError as e:
+        raise HTTPException(status_code=500, detail=e.message)
 
 
 @api_router.get(
@@ -56,6 +59,8 @@ def get_movie_by_id(movieID: str) -> Movie:
         return es.get_movie_by_id(id=movieID)
     except es.MovieNotFoundException as e:
         raise HTTPException(status_code=404, detail=e.message)
+    except es.ElasticError as e:
+        raise HTTPException(status_code=500, detail=e.message)
 
 
 app.include_router(router=api_router, prefix="/api")
