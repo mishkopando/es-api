@@ -1,11 +1,11 @@
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, APIRouter, Query
+from fastapi import FastAPI, APIRouter, Query, HTTPException
 
-from settings import Settings
+from settings import app_settings
 from models import ShortMovie, Movie, SortEnum, SortOrderEnum
-
+import es
 
 APP_NAME = "Praktikum HTTP REST API for ES"
 
@@ -17,7 +17,6 @@ app = FastAPI(
 )
 
 api_router = APIRouter()
-app_settings = Settings()
 
 search_title = """неточный поиск по названию, описанию, актёрам, сценаристам и режиссёрам фильма 
 Представьте, что вы вбили в поиск Яндекса "Звёздные войны" или "Джордж Лукас" или "Лукас войны" 
@@ -29,7 +28,7 @@ search_title = """неточный поиск по названию, описа�
     tags=["movies"],
     summary="Список фильмов",
 )
-async def get_movies_list(
+def get_movies_list(
         limit: int = Query(default=50, description="количество объектов, которое надо вывести", gt=0),
         page: int = Query(default=1, description="номер страницы", gt=0),
         sort: SortEnum = Query(default=SortEnum.id, description="свойство, по которому нужно отсортировать результат"),
@@ -47,12 +46,17 @@ async def get_movies_list(
 
 @api_router.get(
     path="/movies/{movieID}",
+    response_model=Movie,
     tags=["movies"],
     summary="Получить фильм",
     description="Получить фильм",
 )
-async def get_movie_by_id(movieID: str):
-    return {"movie_id": movieID}
+def get_movie_by_id(movieID: str) -> Movie:
+    try:
+        return es.get_movie_by_id(id=movieID)
+    except es.MovieNotFoundException as e:
+        raise HTTPException(status_code=404, detail=e.message)
+
 
 app.include_router(router=api_router, prefix="/api")
 
