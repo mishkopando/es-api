@@ -59,7 +59,7 @@ def search_movies(
         json["query"] = {
             "multi_match": {
                 "query": search,
-                "fuzziness": "auto",
+                # "fuzziness": 1,
                 "fields": [
                     "title^5",
                     "description^4",
